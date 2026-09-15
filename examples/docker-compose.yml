@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Radarr - Movie management service
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000                    # Process UID
+      - PGID=1000                    # Process GID
+      - TZ=America/New_York          # Timezone
+    volumes:
+      - ./radarr/config:/config      # Configuration directory
+      - ./media/movies:/movies       # Movies library
+      - ./downloads:/downloads       # Download directory
+    ports:
+      - "7878:7878"                  # Radarr web interface (localhost only)
+    restart: unless-stopped
+    networks:
+      - media-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/radarr/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx - Reverse proxy and web server
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    volumes:
+      - ./nginx/radarr.conf:/etc/nginx/conf.d/radarr.conf:ro
+      - ./nginx/radarr-ssl.conf:/etc/nginx/conf.d/radarr-ssl.conf:ro
+      - ./letsencrypt:/etc/letsencrypt:ro  # SSL certificates
+      - ./certbot-validation:/var/www/certbot:ro  # Certbot validation
+      - ./nginx/cache:/var/cache/nginx
+    ports:
+      - "80:80"                      # HTTP
+      - "443:443"                    # HTTPS
+    depends_on:
+      - radarr
+    restart: unless-stopped
+    networks:
+      - media-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Certbot - SSL certificate management (optional, run once or as needed)
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./letsencrypt:/etc/letsencrypt
+      - ./certbot-validation:/var/www/certbot
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done;'
+    profiles:
+      - optional  # Only run when explicitly requested
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    driver: bridge
+
+# Usage:
+# 
+# 1. Copy nginx config files to ./nginx/
+# 2. Update yourdomain.com references in Nginx configs
+# 3. Create required directories:
+#    mkdir -p radarr/config media/movies downloads letsencrypt certbot-validation nginx/cache
+# 4. Start services:
+#    docker-compose up -d
+# 5. Get SSL certificate (after DNS is configured):
+#    docker-compose --profile optional run certbot certonly --webroot -w /var/www/certbot -d yourdomain.com
+# 6. Update nginx config to use SSL
+# 7. Restart Nginx:
+#    docker-compose restart nginx
