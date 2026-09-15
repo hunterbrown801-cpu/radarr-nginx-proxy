@@ -1,0 +1,59 @@
+[Unit]
+Description=Sonarr Daemon
+After=syslog.target network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sonarr
+Group=sonarr
+GuessMainPID=no
+
+# Sonarr needs to be run from its own directory
+WorkingDirectory=/opt/Sonarr
+ExecStart=/opt/Sonarr/Sonarr -nobrowser -data=/config
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5
+
+# Set a large file descriptor limit
+LimitNOFILE=65535
+
+# Log settings
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=Sonarr
+
+# Environment variables (optional)
+Environment="TZ=America/New_York"
+
+[Install]
+WantedBy=multi-user.target
+
+# Installation:
+# 1. Copy this file to /etc/systemd/system/sonarr.service
+#    sudo cp systemd-sonarr.service /etc/systemd/system/sonarr.service
+#
+# 2. Reload systemd daemon:
+#    sudo systemctl daemon-reload
+#
+# 3. Enable the service to start on boot:
+#    sudo systemctl enable sonarr
+#
+# 4. Start Sonarr:
+#    sudo systemctl start sonarr
+#
+# 5. Check status:
+#    sudo systemctl status sonarr
+#
+# 6. View logs:
+#    sudo journalctl -u sonarr -f
+#
+# Usage:
+# - Start:   sudo systemctl start sonarr
+# - Stop:    sudo systemctl stop sonarr
+# - Restart: sudo systemctl restart sonarr
+# - Status:  sudo systemctl status sonarr
+# - Logs:    sudo journalctl -u sonarr -f (live)
+#            sudo journalctl -u sonarr --since "1 hour ago"
