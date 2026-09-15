@@ -1,0 +1,59 @@
+[Unit]
+Description=Radarr Daemon
+After=syslog.target network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=radarr
+Group=radarr
+GuessMainPID=no
+
+# Radarr needs to be run from its own directory
+WorkingDirectory=/opt/Radarr
+ExecStart=/opt/Radarr/Radarr -nobrowser -data=/config
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5
+
+# Set a large file descriptor limit
+LimitNOFILE=65535
+
+# Log settings
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=Radarr
+
+# Environment variables (optional)
+Environment="TZ=America/New_York"
+
+[Install]
+WantedBy=multi-user.target
+
+# Installation:
+# 1. Copy this file to /etc/systemd/system/radarr.service
+#    sudo cp systemd-radarr.service /etc/systemd/system/radarr.service
+#
+# 2. Reload systemd daemon:
+#    sudo systemctl daemon-reload
+#
+# 3. Enable the service to start on boot:
+#    sudo systemctl enable radarr
+#
+# 4. Start Radarr:
+#    sudo systemctl start radarr
+#
+# 5. Check status:
+#    sudo systemctl status radarr
+#
+# 6. View logs:
+#    sudo journalctl -u radarr -f
+#
+# Usage:
+# - Start:   sudo systemctl start radarr
+# - Stop:    sudo systemctl stop radarr
+# - Restart: sudo systemctl restart radarr
+# - Status:  sudo systemctl status radarr
+# - Logs:    sudo journalctl -u radarr -f (live)
+#            sudo journalctl -u radarr --since "1 hour ago"
